@@ -16,8 +16,8 @@ class HomeView extends GetView<HomeController> {
     return Scaffold(
       backgroundColor: AppColors.bgColor,
       appBar: AppBar(
-        backgroundColor: Color(0xFF676BD0),
-        title: Text(
+        backgroundColor: const Color(0xFF676BD0),
+        title: const Text(
           "Weather App",
           style: TextStyle(color: Colors.white),
         ),
@@ -32,41 +32,32 @@ class HomeView extends GetView<HomeController> {
         }
 
         final weather = controller.weather.value!;
-        final DateTime currentDateTime = DateTime.now();
-        final DateTime sunriseTime =
-            DateTime.fromMillisecondsSinceEpoch(weather.sys!.sunrise! * 1000);
-        final DateTime sunsetTime =
-            DateTime.fromMillisecondsSinceEpoch(weather.sys!.sunset! * 1000);
+        final currentDateTime = DateTime.now();
+        final sunriseTime =
+        DateTime.fromMillisecondsSinceEpoch(weather.sunrise! * 1000);
+        final sunsetTime =
+        DateTime.fromMillisecondsSinceEpoch(weather.sunset! * 1000);
 
         return Center(
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                Text(
-                  weather.name ?? "Unknown City",
-                  style: AppTextStyle.headerTextStyle(fontSize: 36),
-                ),
-                const SizedBox(height: 10),
-                buildDateTime(currentDateTime),
-                Image.network(
-                  "https://openweathermap.org/img/w/${weather.weather?[0].icon}.png",
-                  width: 100,
-                  height: 100,
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  "${weather.main?.temp?.toStringAsFixed(1)}°C",
-                  style: AppTextStyle.headerTextStyle(fontSize: 48),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  weather.weather?[0].description?.capitalizeFirst ??
-                      "No Description",
-                  style: AppTextStyle.normalTextStyle(fontSize: 18),
-                ),
-                const SizedBox(height: 24.0),
-                buildContainer(context, weather, sunriseTime, sunsetTime)
-              ],
+          child: RefreshIndicator(
+            onRefresh: () async {
+              await controller.fetchWeather(weather.name ?? "Dhaka");
+            },
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  buildCityName(weather.name),
+                  const SizedBox(height: 10),
+                  buildDateTime(currentDateTime),
+                  buildWeatherIcon(weather.icon),
+                  const SizedBox(height: 10),
+                  buildTemperature(weather.temp),
+                  const SizedBox(height: 5),
+                  buildDescription(weather.description),
+                  const SizedBox(height: 24.0),
+                  buildWeatherDetails(context, weather, sunriseTime, sunsetTime),
+                ],
+              ),
             ),
           ),
         );
@@ -80,7 +71,14 @@ class HomeView extends GetView<HomeController> {
     );
   }
 
-  Column buildDateTime(DateTime currentDateTime) {
+  Widget buildCityName(String? cityName) {
+    return Text(
+      cityName ?? "Unknown City",
+      style: AppTextStyle.headerTextStyle(fontSize: 36),
+    );
+  }
+
+  Widget buildDateTime(DateTime currentDateTime) {
     return Column(
       children: [
         Text(
@@ -90,19 +88,39 @@ class HomeView extends GetView<HomeController> {
         const SizedBox(height: 4),
         Text(
           DateFormat('EEEE, MMM d, yyyy').format(currentDateTime),
-          style: AppTextStyle.normalTextStyle(
-            fontSize: 16,
-          ),
+          style: AppTextStyle.normalTextStyle(fontSize: 16),
         ),
       ],
     );
   }
 
-  Container buildContainer(BuildContext context, WeatherModel weather,
-      DateTime sunriseTime, DateTime sunsetTime) {
+  Widget buildWeatherIcon(String? iconCode) {
+    return Image.network(
+      "https://openweathermap.org/img/w/$iconCode.png",
+      width: 100,
+      height: 100,
+    );
+  }
+
+  Widget buildTemperature(double? temp) {
+    return Text(
+      temp != null ? "${temp.toStringAsFixed(1)}°C" : "N/A",
+      style: AppTextStyle.headerTextStyle(fontSize: 48),
+    );
+  }
+
+  Widget buildDescription(String? description) {
+    return Text(
+      description?.capitalizeFirst ?? "No Description",
+      style: AppTextStyle.normalTextStyle(fontSize: 18),
+    );
+  }
+
+  Widget buildWeatherDetails(
+      BuildContext context, WeatherModel weather, DateTime sunriseTime, DateTime sunsetTime) {
     return Container(
       height: MediaQuery.sizeOf(context).height * 0.15,
-      width: MediaQuery.sizeOf(context).height * 0.38,
+      width: MediaQuery.sizeOf(context).width * 0.9,
       decoration: BoxDecoration(
         color: AppColors.primaryColor,
         borderRadius: BorderRadius.circular(20),
@@ -110,15 +128,14 @@ class HomeView extends GetView<HomeController> {
       padding: const EdgeInsets.all(8.0),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           RowWidgets(
-            text1: "Max: ${weather.main?.tempMax?.toStringAsFixed(1)}°C",
-            text2: "Min: ${weather.main?.tempMin?.toStringAsFixed(1)}°C",
+            text1: "Max: ${weather.tempMax?.toStringAsFixed(1)}°C",
+            text2: "Min: ${weather.tempMin?.toStringAsFixed(1)}°C",
           ),
           RowWidgets(
-            text1: "Wind: ${weather.wind?.speed?.toStringAsFixed(1)} m/s",
-            text2: "Humidity: ${weather.main?.humidity?.toString()}%",
+            text1: "Wind: ${weather.windSpeed?.toStringAsFixed(1)} m/s",
+            text2: "Humidity: ${weather.humidity?.toString()}%",
           ),
           RowWidgets(
             text1: "Sunrise: ${DateFormat('hh:mm a').format(sunriseTime)}",
